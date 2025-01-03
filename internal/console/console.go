@@ -9,19 +9,15 @@ import (
 var bufferedConsoleWriter = bufio.NewWriter(os.Stdout)
 
 func Write(a ...any) {
-	_, err := bufferedConsoleWriter.WriteString(fmt.Sprint(a[0]))
-	if err != nil {
+	if _, err := fmt.Fprint(bufferedConsoleWriter, a[0]); err != nil {
 		panic(err)
 	}
 
 	for i := 1; i < len(a); i++ {
-		_, err = bufferedConsoleWriter.WriteString(" ")
-		if err != nil {
+		if _, err := fmt.Fprint(bufferedConsoleWriter, " "); err != nil {
 			panic(err)
 		}
-
-		_, err = bufferedConsoleWriter.WriteString(fmt.Sprint(a[i]))
-		if err != nil {
+		if _, err := fmt.Fprint(bufferedConsoleWriter, a[i]); err != nil {
 			panic(err)
 		}
 	}
@@ -30,8 +26,7 @@ func Write(a ...any) {
 func WriteLine(a ...any) { Write(a...); Write("\n") }
 
 func Writef(format string, a ...any) {
-	_, err := bufferedConsoleWriter.WriteString(fmt.Sprintf(format, a...))
-	if err != nil {
+	if _, err := fmt.Fprintf(bufferedConsoleWriter, format, a...); err != nil {
 		panic(err)
 	}
 }
@@ -43,8 +38,7 @@ func WriteRepeated(a any, repeat int) {
 }
 
 func Flush() {
-	err := bufferedConsoleWriter.Flush()
-	if err != nil {
+	if err := bufferedConsoleWriter.Flush(); err != nil {
 		panic(err)
 	}
 }
