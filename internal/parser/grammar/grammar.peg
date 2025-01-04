@@ -1,0 +1,125 @@
+// Lox Grammar in PEG rule definitions.
+//
+// This file is for [pigeon](https://github.com/mna/pigeon) to generate parsers. Rules defined below are referenced from
+// the official definition in [Crafting Interpreters](https://craftinginterpreters.com/appendix-i.html), with some parts
+// modified for better generating AST.
+
+{
+	package grammar
+
+	import (
+		"strconv"
+		"strings"
+		"github.com/mussel-lox/clam/ast"
+	)
+
+	// matchedTextOf gets the text (in []byte) of the current match, and performs [strings.TrimSpace] since Lox ignores
+	// spaces between tokens.
+	func matchedTextOf(c *current) string {
+		return strings.TrimSpace(string(c.text))
+	}
+}
+
+_ "whitespaces" = [ \t\r\n]*
+
+True  = _ "true" _  { return ast.BooleanLiteral(true), nil }
+False = _ "false" _ { return ast.BooleanLiteral(false), nil }
+Nil   = _ "nil" _   { return ast.Nil{}, nil }
+This  = _ "this" _  { return ast.This{}, nil }
+Super = _ "super" _ { return ast.Super{}, nil }
+
+Number = _ [0-9]+ ('.' [0-9]+)? _ {
+	n, err := strconv.ParseFloat(matchedTextOf(c), 64)
+	if err != nil {
+		return nil, err
+	}
+	return ast.NumberLiteral(n), nil
+}
+
+String = _ '"' [^"]* '"' _ {
+	return ast.StringLiteral(matchedTextOf(c)), nil
+}
+
+Identifier = _ [a-zA-Z] [a-zA-Z0-9_]* _ {
+	return ast.Identifier(matchedTextOf(c)), nil
+}
+
+Primary 
+	= True 
+	/ False 
+	/ Nil 
+	/ This 
+	/ Super 
+	/ Number 
+	/ String 
+	/ Identifier
+
+
+Unary = _ op:("!" / "-")? r:Primary _ {
+	if op == nil {
+		return r, nil
+	}
+	operand := r.(ast.Expression)
+
+	var operator ast.UnaryOperator
+	switch string(op.([]byte)) {
+	case "!":
+		operator = ast.UopLogicalNot
+	case "-":
+		operator = ast.UopNegate
+	default:
+		panic("unreachable case in Unary")
+	}
+
+	return &ast.UnaryExpression {
+		Operand:  operand,
+		Operator: operator,
+	}, nil
+}
+
+Factor = _ l:Unary r:(("*" / "/") Unary)* _ {
+	left := l.(ast.Expression)
+	rest := r.([]any)
+	for _, pattern := range rest {
+		clause := pattern.([]any)
+
+		var operator ast.BinaryOperator
+		switch string(clause[0].([]byte)) {
+		case "*":
+			operator = ast.BinopMultiply
+		case "/":
+			operator = ast.BinopDivide
+		default:
+			panic("unreachable case in Factor")
+		}
+
+		right := clause[1].(ast.Expression)
+		left = &ast.BinaryExpression {
+			Left:     left,
+			Right:    right,
+			Operator: operator,
+		}
+	}
+	return left, nil
+}
+
+// Term = _ l:Factor op:("+" / "-") r:Factor _ {
+// 	left  := l.(ast.Expression)
+// 	right := r.(ast.Expression)
+// 
+// 	var operator ast.BinaryOperator
+// 	switch string(op.([]byte)) {
+// 	case "+":
+// 		operator = ast.BinopAdd
+// 	case "-":
+// 		operator = ast.BinopSubtract
+// 	default:
+// 		panic("unreachable case in Term")
+// 	}
+// 
+// 	return ast.BinaryExpression {
+// 		Left:     left,
+// 		Right:    right,
+// 		Operator: operator,
+// 	}, nil
+// }
