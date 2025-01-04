@@ -6,8 +6,8 @@ const (
 )
 
 const (
-	BinopOr BinaryOperator = iota
-	BinopAnd
+	BinopLogicalOr BinaryOperator = iota
+	BinopLogicalAnd
 	BinopEqual
 	BinopNotEqual
 	BinopGreater
