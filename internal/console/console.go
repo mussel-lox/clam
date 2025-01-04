@@ -25,7 +25,7 @@ func Write(a ...any) {
 
 func WriteLine(a ...any) { Write(a...); Write("\n") }
 
-func Writef(format string, a ...any) {
+func WriteFormatted(format string, a ...any) {
 	if _, err := fmt.Fprintf(bufferedConsoleWriter, format, a...); err != nil {
 		panic(err)
 	}
@@ -45,5 +45,5 @@ func Flush() {
 
 func Print(a ...any)                  { Write(a...); Flush() }
 func Println(a ...any)                { WriteLine(a...); Flush() }
-func Printf(format string, a ...any)  { Writef(format, a...); Flush() }
+func Printf(format string, a ...any)  { WriteFormatted(format, a...); Flush() }
 func PrintRepeated(a any, repeat int) { WriteRepeated(a, repeat); Flush() }
