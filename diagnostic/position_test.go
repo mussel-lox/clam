@@ -1,10 +1,12 @@
 package diagnostic
 
 import (
-	"github.com/mussel-lox/clam/internal"
 	"testing"
+
+	"github.com/mussel-lox/clam/internal"
 )
 
+// Test snippets.
 var (
 	transformExamples = []transformExample{
 		newTransformExample("Hello, World", 0, 3, lineBasedPosition{
@@ -45,12 +47,15 @@ var (
 	}
 )
 
+// transformExample is a combination of [Source], [Position] and a expected JSON string. It is used to store the test
+// snippets.
 type transformExample struct {
 	source   *Source
-	position Position
+	position *Position
 	expect   string
 }
 
+// newTransformExample is a helper function to create a [transformExample].
 func newTransformExample(source string, start, end int, expect ...lineBasedPosition) transformExample {
 	return transformExample{
 		source:   NewSource("", source),
