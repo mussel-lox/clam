@@ -1,10 +1,12 @@
+// Package scanner provides a simple API to convert source text into tokens.
 package scanner
 
 import "github.com/mussel-lox/clam/internal/diagnostic"
 
-func Scan(source *diagnostic.Source) ([]*Token, *diagnostic.Diagnostic) {
+// Scan turns source text into tokens.
+func Scan(source *diagnostic.Source) ([]*Token, error) {
+	var tokens []*Token
 	s := newScanner(source)
-	tokens := make([]*Token, 0)
 	for {
 		token, err := s.Scan()
 		if err != nil {
@@ -32,6 +34,6 @@ func newScanner(source *diagnostic.Source) *scanner {
 	}
 }
 
-func (s *scanner) Scan() (*Token, *diagnostic.Diagnostic) {
+func (s *scanner) Scan() (*Token, error) {
 	panic("unimplemented")
 }

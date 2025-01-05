@@ -1,3 +1,5 @@
+//revive:disable
+
 package ast
 
 type Statement interface {

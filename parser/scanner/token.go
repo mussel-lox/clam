@@ -2,6 +2,8 @@ package scanner
 
 import "github.com/mussel-lox/clam/internal/diagnostic"
 
+//revive:disable
+
 const (
 	TokLeftParenthesis TokenKind = iota
 	TokRightParenthesis
@@ -46,8 +48,12 @@ const (
 	TokWhile
 )
 
+//revive:enable
+
+// TokenKind is the category of token (e.g. Identifier).
 type TokenKind int
 
+// Token is the smallest unit that a parser can recognize. Scanner is the tool to split source text into tokens.
 type Token struct {
 	Kind     TokenKind
 	Lexeme   string

@@ -1,3 +1,5 @@
+// Package repr provides simple API to check whether two structures are the same in a certain representation (e.g.
+// JSON).
 package repr
 
 import "encoding/json"
@@ -10,6 +12,7 @@ func jsonReprOf(value any) string {
 	return string(data)
 }
 
-func Eq[T any](a, b T) bool {
+// Eq returns whether [a] and [b] are the same in some form of representation.
+func Eq(a, b any) bool {
 	return jsonReprOf(a) == jsonReprOf(b)
 }

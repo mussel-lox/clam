@@ -2,6 +2,9 @@ package diagnostic
 
 import "strings"
 
+// Source is a shallow encapsulation of the source code.
+//
+// This struct contains all information needed to display syntax errors friendly.
 type Source struct {
 	name             string
 	text             []rune
@@ -9,6 +12,7 @@ type Source struct {
 	prefixSumLengths []int
 }
 
+// NewSource creates a [Source] with a name (conventionally filename) and its content string.
 func NewSource(name, str string) *Source {
 	cleanedText := strings.ReplaceAll(str, "\r", "")
 	text := []rune(cleanedText)
@@ -29,7 +33,11 @@ func NewSource(name, str string) *Source {
 	}
 }
 
+// At returns the rune of the [Source] text at the specific offset.
 func (s *Source) At(n int) rune { return s.text[n] }
+
+// Len returns the length of source code (in []rune).
+func (s *Source) Len() int { return len(s.text) }
 
 func (s *Source) lengthOfLine(n int) int {
 	if n == 0 {
