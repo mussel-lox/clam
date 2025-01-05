@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/fatih/color"
 )
@@ -16,8 +17,8 @@ var (
 	printErrorUnderline = color.New(color.FgHiRed).FprintFunc()
 	printSource         = color.New(color.FgHiBlack).FprintfFunc()
 
-	filenameIndent   = "  "
-	sourceLineIndent = "    "
+	filenameIndent   = strings.Repeat(" ", 2)
+	sourceLineIndent = strings.Repeat(" ", 4)
 )
 
 type Diagnostic struct {

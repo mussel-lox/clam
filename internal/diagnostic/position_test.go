@@ -3,7 +3,7 @@ package diagnostic
 import (
 	"testing"
 
-	"github.com/mussel-lox/clam/internal"
+	"github.com/mussel-lox/clam/internal/repr"
 )
 
 // Test snippets.
@@ -52,7 +52,7 @@ var (
 type transformExample struct {
 	source   *Source
 	position *Position
-	expect   string
+	expect   []lineBasedPosition
 }
 
 // newTransformExample is a helper function to create a [transformExample].
@@ -60,16 +60,15 @@ func newTransformExample(source string, start, end int, expect ...lineBasedPosit
 	return transformExample{
 		source:   NewSource("", source),
 		position: NewPosition(start, end),
-		expect:   internal.Repr(expect),
+		expect:   expect,
 	}
 }
 
 func TestPositionTransform(t *testing.T) {
 	for _, example := range transformExamples {
 		linepos := example.position.transform(example.source)
-		repr := internal.Repr(linepos)
-		if repr != example.expect {
-			t.Errorf("expect %s, got %s", example.expect, repr)
+		if !repr.Eq(example.expect, linepos) {
+			t.Errorf("expect %v, got %v", example.expect, &linepos)
 		}
 	}
 }
