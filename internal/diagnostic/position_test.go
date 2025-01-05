@@ -47,7 +47,7 @@ var (
 	}
 )
 
-// transformExample is a combination of [Source], [Position] and a expected JSON string. It is used to store the test
+// transformExample is a combination of [Source], [Position] and an expected JSON string. It is used to store the test
 // snippets.
 type transformExample struct {
 	source   *Source

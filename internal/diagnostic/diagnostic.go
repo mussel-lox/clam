@@ -46,6 +46,7 @@ func (d *Diagnostic) Attach(source *Source) *Diagnostic {
 	return d
 }
 
+//goland:noinspection GoUnhandledErrorResult
 func (d *Diagnostic) Display() {
 	writer := bufio.NewWriter(os.Stderr)
 	defer writer.Flush()
