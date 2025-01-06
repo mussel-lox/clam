@@ -39,6 +39,11 @@ func (s *Source) At(n int) rune { return s.text[n] }
 // Len returns the length of source code (in []rune).
 func (s *Source) Len() int { return len(s.text) }
 
+// Slice returns a source string from a range.
+func (s *Source) Slice(start, end int) string {
+	return string(s.text[start:end])
+}
+
 func (s *Source) lengthOfLine(n int) int {
 	if n == 0 {
 		return s.prefixSumLengths[0]

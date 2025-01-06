@@ -67,11 +67,3 @@ func newToken(kind TokenKind, lexeme []rune, position diagnostic.Position) *Toke
 		Position: position,
 	}
 }
-
-func newKeywordToken(kind TokenKind, position diagnostic.Position) *Token {
-	return &Token{
-		Kind:     kind,
-		Lexeme:   "",
-		Position: position,
-	}
-}
