@@ -3,7 +3,7 @@ package diagnostic
 import (
 	"testing"
 
-	"github.com/mussel-lox/clam/internal/repr"
+	"github.com/mussel-lox/clam/internal/represent"
 )
 
 // Test snippets.
@@ -67,7 +67,7 @@ func newTransformExample(source string, start, end int, expect ...lineBasedPosit
 func TestPositionTransform(t *testing.T) {
 	for _, example := range transformExamples {
 		linepos := example.position.transform(example.source)
-		if !repr.Eq(example.expect, linepos) {
+		if !represent.Eq(example.expect, linepos) {
 			t.Errorf("expect %v, got %v", example.expect, &linepos)
 		}
 	}

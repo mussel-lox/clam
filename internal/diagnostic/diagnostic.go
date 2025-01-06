@@ -79,7 +79,7 @@ func (d *Diagnostic) Error() string {
 		for range pos.End - pos.Start + 1 {
 			printErrorUnderline(builder, "^")
 		}
-		printErrorUnderline(builder, " at here\n")
+		printErrorUnderline(builder, " around here\n")
 	}
 	return builder.String()
 }
