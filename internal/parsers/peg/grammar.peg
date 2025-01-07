@@ -1,0 +1,181 @@
+// Lox syntax in PEG definitions.
+//
+// This file contains PEG definitions of Lox language, referenced from https://craftinginterpreters.com/appendix-i.html.
+
+{
+	package peg
+
+	import (
+		"bytes"
+		"strconv"
+		"strings"
+
+		"github.com/mussel-lox/clam/ast"
+	)
+
+	func matchedTextOf(c *current) string {
+		return strings.TrimSpace(string(c.text))
+	}
+
+	func recursiveResolveExpressions(a any) []ast.Expression {
+		var exprs []ast.Expression
+
+		switch arg := a.(type) {
+		case ast.Expression:
+			exprs = append(exprs, arg)
+		case []any:
+			for _, element := range arg {
+				e := recursiveResolveExpressions(element)
+				if e != nil {
+					exprs = append(exprs, e...)
+				}
+			}
+		}
+		return exprs
+	}
+
+	func recursiveResolveIdentifiers(a any) []ast.Identifier {
+		var idents []ast.Identifier
+
+		switch arg := a.(type) {
+		case ast.Identifier:
+			idents = append(ident, arg)
+		case []any:
+			for _, element := range arg {
+				i := recursiveResolveIdentifiers(element)
+				if i != nil {
+					idents = append(idents, i...)
+				}
+			}
+		}
+		return idents
+	}
+}
+
+
+// Lexical Grammar
+
+_ "WHITESPACES" = [ \t\r\n]*
+
+ALPHA = [a-zA-Z_]
+DIGIT = [0-9]
+
+IDENTIFIER = _ ALPHA ( ALPHA / DIGIT )* _ {
+	str := matchedTextOf(c)
+	return ast.Identifier(str), nil
+}
+
+STRING = _ '"' [^"]* '"' _ {
+	str := matchedTextOf(c)
+	return ast.StringLiteral(str), nil
+}
+
+NUMBER = _ DIGIT+ ("." DIGIT+)? _ {
+	str := matchedTextOf(c)
+	n, err := strconv.ParseFloat(str, 64)
+	if err != nil {
+		return nil, err
+	}
+	return ast.NumberLiteral(n), nil
+}
+
+LEFT_PAREN    = _ "(" _
+RIGHT_PAREN   = _ ")" _
+LEFT_BRACE    = _ "{" _
+RIGHT_BRACE   = _ "}" _
+COMMA         = _ "," _
+DOT           = _ "." _
+MINUS         = _ "-" _
+PLUS          = _ "+" _
+SEMICOLON     = _ ";" _
+SLASH         = _ "/" _
+STAR          = _ "*" _
+BANG          = _ "!" _
+EQUAL         = _ "=" _
+GREATER       = _ ">" _
+LESS          = _ "<" _
+
+BANG_EQUAL    = _ "!=" _
+EQUAL_EQUAL   = _ "==" _
+GREATER_EQUAL = _ ">=" _
+LESS_EQUAL    = _ "<=" _
+
+AND           = _ "and"    _
+CLASS         = _ "class"  _
+ELSE          = _ "else"   _
+FALSE         = _ "false"  _
+FOR           = _ "for"    _
+FUN           = _ "fun"    _
+IF            = _ "if"     _
+NIL           = _ "nil"    _
+OR            = _ "or"     _
+PRINT         = _ "print"  _
+RETURN        = _ "return" _
+SUPER         = _ "super"  _
+THIS          = _ "this"   _
+TRUE          = _ "true"   _
+VAR           = _ "var"    _
+WHILE         = _ "while"  _
+
+
+// Expression Utility Rules
+
+arguments = args:(Expression (COMMA Expression)*) {
+	return recursiveResolveExpressions(args), nil
+}
+
+parameters = params:(IDENTIFIER (COMMA IDENTIFIER)*) {
+	return recursiveResolveIdentifiers(params), nil
+}
+
+function = name:IDENTIFIER LEFT_PAREN params:parameters? RIGHT_PAREN body:Block {
+	return &ast.FunDeclaration{
+		Name:       name.(ast.Identifier),
+		Parameters: params.([]ast.Identifier),
+		Body:				body.(*ast.BlockStatement),
+	}, nil
+}
+
+// Expression Grammar
+
+Primary
+	= TRUE         { return ast.BooleanLiteral(true), nil }
+	/ FALSE        { return ast.BooleanLiteral(false), nil }
+	/ NIL          { return ast.Nil{}, nil }
+	/ THIS         { return ast.This{}, nil }
+	/ n:NUMBER     { return n, nil }
+	/ s:STRING     { return s, nil }
+	/ i:IDENTIFIER { return i, nil }
+	/ LEFT_PAREN e:Expression RIGHT_PAREN {
+		return e, nil
+	}
+	/ SUPER DOT i:IDENTIFIER {
+		return &ast.PropertyAccessExpression{
+			Target:   ast.Super{},
+			Property: i,
+		}, nil
+	}
+
+Call = e:Primary pattern:(LEFT_PAREN arguments? RIGHT_PAREN / DOT IDENTIFIER)* {
+	expr := e.(ast.Expression)
+	for _, pat := range pattern.([]any) {
+outer:
+		for _, element := range pat {
+			switch e := element.(type) {
+			case []ast.Expression:
+				expr = &ast.InvocationExpression {
+					Callee:    expr,
+					Arguments: e,
+				}
+				break outer
+			case ast.Identifier:
+				expr = &ast.PropertyAccessExpression {
+					Target:   expr,
+					Property: e,
+				}
+				break outer
+			}
+		}
+	}
+	return expr, nil
+}

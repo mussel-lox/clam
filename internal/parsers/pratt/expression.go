@@ -1,13 +1,12 @@
-package parser
+//revive:disable
+package pratt
 
 import (
 	"strconv"
 
 	"github.com/mussel-lox/clam/ast"
-	"github.com/mussel-lox/clam/parser/scanner"
+	"github.com/mussel-lox/clam/internal/parsers/pratt/scanner"
 )
-
-//revive:disable
 
 const (
 	PrecAssignment Precedence = iota
@@ -17,14 +16,19 @@ const (
 	PrecComparison
 	PrecAdditive
 	PrecMultiplicative
+	PrecUnary
+	PrecInvocation
+	PrecPrimary
 )
-
-//revive:enable
 
 // Precedence is the infix operator precedence defined in binary expressions.
 type Precedence int
 
 func (p *parser) parseExpression() (ast.Expression, error) {
+	panic("unimplemented")
+}
+
+func (p *parser) parsePrecedence(precedence Precedence) (ast.Expression, error) {
 	panic("unimplemented")
 }
 
@@ -52,6 +56,10 @@ func (p *parser) parseUnary() (ast.Expression, error) {
 		Operand:  expr,
 		Operator: operator,
 	}, nil
+}
+
+func (p *parser) parseInvocation() (ast.Expression, error) {
+	panic("")
 }
 
 func (p *parser) parsePrimary() (ast.Expression, error) {

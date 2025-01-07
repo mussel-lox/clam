@@ -1,12 +1,12 @@
-// Package parser provides a simple API to turn source code into AST.
-package parser
+//revive:disable
+package pratt
 
 import (
 	"fmt"
 
 	"github.com/mussel-lox/clam/ast"
 	"github.com/mussel-lox/clam/internal/diagnostic"
-	"github.com/mussel-lox/clam/parser/scanner"
+	"github.com/mussel-lox/clam/internal/parsers/pratt/scanner"
 )
 
 // Parse turns the source text into a cluster of [ast.Declaration]s.
