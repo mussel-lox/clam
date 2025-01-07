@@ -1,0 +1,383 @@
+// Lox syntax in PEG definitions.
+//
+// This file contains PEG definitions of Lox language, referenced from https://craftinginterpreters.com/appendix-i.html.
+
+{
+	package peg
+
+	import (
+		"bytes"
+		"strconv"
+		"strings"
+
+		"github.com/alecthomas/repr"
+		"github.com/mussel-lox/clam/ast"
+	)
+
+	const (
+		TokLeftParenthesis TokenKind = iota
+		TokRightParenthesis
+		TokLeftBrace
+		TokRightBrace
+		TokComma
+		TokDot
+		TokMinus
+		TokPlus
+		TokSemicolon
+		TokSlash
+		TokStar
+		TokBang
+		TokBangEqual
+		TokEqual
+		TokEqualEqual
+		TokGreater
+		TokGreaterEqual
+		TokLess
+		TokLessEqual
+		TokAnd
+		TokClass
+		TokElse
+		TokFalse
+		TokFor
+		TokFun
+		TokIf
+		TokNil
+		TokOr
+		TokPrint
+		TokReturn
+		TokSuper
+		TokThis
+		TokTrue
+		TokVar
+		TokWhile
+	)
+
+	type TokenKind int
+
+	func matchedTextOf(c *current) string {
+		return strings.TrimSpace(string(c.text))
+	}
+
+	func recursiveResolveExpressions(a any) []ast.Expression {
+		var exprs []ast.Expression
+		switch arg := a.(type) {
+		case ast.Expression:
+			exprs = append(exprs, arg)
+		case []any:
+			for _, element := range arg {
+				e := recursiveResolveExpressions(element)
+				if e != nil {
+					exprs = append(exprs, e...)
+				}
+			}
+		}
+		return exprs
+	}
+
+	func recursiveResolveIdentifiers(a any) []ast.Identifier {
+		var idents []ast.Identifier
+		switch arg := a.(type) {
+		case ast.Identifier:
+			idents = append(idents, arg)
+		case []any:
+			for _, element := range arg {
+				i := recursiveResolveIdentifiers(element)
+				if i != nil {
+					idents = append(idents, i...)
+				}
+			}
+		}
+		return idents
+	}
+}
+
+
+// Lexical Grammar
+
+_ "WHITESPACES" = [ \t\r\n]*
+
+ALPHA = [a-zA-Z_]
+DIGIT = [0-9]
+
+IDENTIFIER = _ ALPHA ( ALPHA / DIGIT )* _ {
+	str := matchedTextOf(c)
+	return ast.Identifier(str), nil
+}
+
+STRING = _ '"' [^"]* '"' _ {
+	str := matchedTextOf(c)
+	return ast.StringLiteral(str), nil
+}
+
+NUMBER = _ DIGIT+ ("." DIGIT+)? _ {
+	str := matchedTextOf(c)
+	n, err := strconv.ParseFloat(str, 64)
+	if err != nil {
+		return nil, err
+	}
+	return ast.NumberLiteral(n), nil
+}
+
+LEFT_PAREN    = _ "(" _ { return TokLeftParenthesis, nil }
+RIGHT_PAREN   = _ ")" _ { return TokRightParenthesis, nil }
+LEFT_BRACE    = _ "{" _ { return TokLeftBrace, nil }
+RIGHT_BRACE   = _ "}" _ { return TokRightBrace, nil }
+COMMA         = _ "," _ { return TokComma, nil }
+DOT           = _ "." _ { return TokDot, nil }
+MINUS         = _ "-" _ { return TokMinus, nil }
+PLUS          = _ "+" _ { return TokPlus, nil }
+SEMICOLON     = _ ";" _ { return TokSemicolon, nil }
+SLASH         = _ "/" _ { return TokSlash, nil }
+STAR          = _ "*" _ { return TokStar, nil }
+BANG          = _ "!" _ { return TokBang, nil }
+EQUAL         = _ "=" _ { return TokEqual, nil }
+GREATER       = _ ">" _ { return TokGreater, nil }
+LESS          = _ "<" _ { return TokLess, nil }
+
+BANG_EQUAL    = _ "!=" _ { return TokBangEqual, nil }
+EQUAL_EQUAL   = _ "==" _ { return TokEqualEqual, nil }
+GREATER_EQUAL = _ ">=" _ { return TokGreaterEqual, nil }
+LESS_EQUAL    = _ "<=" _ { return TokLessEqual, nil }
+
+AND           = _ "and"    _ { return TokAnd, nil }
+CLASS         = _ "class"  _ { return TokClass, nil }
+ELSE          = _ "else"   _ { return TokElse, nil }
+FALSE         = _ "false"  _ { return TokFalse, nil }
+FOR           = _ "for"    _ { return TokFor, nil }
+FUN           = _ "fun"    _ { return TokFun, nil }
+IF            = _ "if"     _ { return TokIf, nil }
+NIL           = _ "nil"    _ { return TokNil, nil }
+OR            = _ "or"     _ { return TokOr, nil }
+PRINT         = _ "print"  _ { return TokPrint, nil }
+RETURN        = _ "return" _ { return TokReturn, nil }
+SUPER         = _ "super"  _ { return TokSuper, nil }
+THIS          = _ "this"   _ { return TokThis, nil }
+TRUE          = _ "true"   _ { return TokTrue, nil }
+VAR           = _ "var"    _ { return TokVar, nil }
+WHILE         = _ "while"  _ { return TokWhile, nil }
+
+
+// Expression Utility Rules
+
+arguments = args:(Expression (COMMA Expression)*) {
+	return recursiveResolveExpressions(args), nil
+}
+
+parameters = params:(IDENTIFIER (COMMA IDENTIFIER)*) {
+	return recursiveResolveIdentifiers(params), nil
+}
+
+function = name:IDENTIFIER LEFT_PAREN params:parameters? RIGHT_PAREN body:Block {
+	return &ast.FunDeclaration{
+		Name:       name.(ast.Identifier),
+		Parameters: params.([]ast.Identifier),
+		Body:				body.(*ast.BlockStatement),
+	}, nil
+}
+
+// Expression Grammar
+
+Primary
+	= TRUE         { return ast.BooleanLiteral(true), nil }
+	/ FALSE        { return ast.BooleanLiteral(false), nil }
+	/ NIL          { return ast.Nil{}, nil }
+	/ THIS         { return ast.This{}, nil }
+	/ n:NUMBER     { return n, nil }
+	/ s:STRING     { return s, nil }
+	/ i:IDENTIFIER { return i, nil }
+	/ LEFT_PAREN e:Expression RIGHT_PAREN {
+		return e, nil
+	}
+	/ SUPER DOT i:IDENTIFIER {
+		return &ast.PropertyAccessExpression{
+			Target:   ast.Super{},
+			Property: i.(ast.Identifier),
+		}, nil
+	}
+
+Call = e:Primary pat:(LEFT_PAREN arguments? RIGHT_PAREN / DOT IDENTIFIER)* {
+	expr := e.(ast.Expression)
+	for _, pattern := range pat.([]any) {
+		list := pattern.([]any)
+		switch list[0].(TokenKind) {
+		case TokLeftParenthesis:
+			expr = &ast.InvocationExpression {
+				Callee:    expr,
+				Arguments: list[1].([]ast.Expression),
+			}
+		case TokDot:
+			expr = &ast.PropertyAccessExpression {
+				Target:   expr,
+				Property: list[1].(ast.Identifier),
+			}
+		default:
+			panic("unreachable case in peg::grammar::Call")
+		}
+	}
+	return expr, nil
+}
+
+Unary = op:(BANG / MINUS) u:Unary {
+	var operator ast.UnaryOperator
+	switch op.(TokenKind) {
+	case TokBang:
+		operator = ast.UopLogicalNot
+	case TokMinus:
+		operator = ast.UopNegate
+	default:
+		panic("unreachable case in peg::grammar::Unary")
+	}
+	return &ast.UnaryExpression{
+		Operator: operator,
+		Operand:  u.(ast.Expression),
+	}, nil
+} / Call
+
+Factor = l:Unary pat:((SLASH / STAR) Unary)* {
+	expr := l.(ast.Expression)
+	for _, p := range pat.([]any) {
+		pattern := p.([]any)
+		for i := 0; i < len(pattern); i += 2 {
+			var operator ast.BinaryOperator
+			switch pattern[i].(TokenKind) {
+			case TokSlash:
+				operator = ast.BinopDivide
+			case TokStar:
+				operator = ast.BinopMultiply
+			default:
+				panic("unreachable case in peg::grammar::Factor")
+			}
+			expr = &ast.BinaryExpression {
+				Left:     expr,
+				Operator: operator,
+				Right:    pattern[i+1].(ast.Expression),
+			}
+		}
+	}
+	return expr, nil
+}
+
+Term = l:Factor pat:((MINUS / PLUS) Factor)* {
+	expr := l.(ast.Expression)
+	for _, p := range pat.([]any) {
+		pattern := p.([]any)
+		for i := 0; i < len(pattern); i += 2 {
+			var operator ast.BinaryOperator
+			switch pattern[i].(TokenKind) {
+			case TokMinus:
+				operator = ast.BinopSubtract
+			case TokPlus:
+				operator = ast.BinopAdd
+			default:
+				panic("unreachable case in peg::grammar::Term")
+			}
+			expr = &ast.BinaryExpression {
+				Left:     expr,
+				Operator: operator,
+				Right:    pattern[i+1].(ast.Expression),
+			}
+		}
+	}
+	return expr, nil
+}
+
+Comparison = l:Term pat:((GREATER_EQUAL / LESS_EQUAL / GREATER / LESS) Term)* {
+	expr := l.(ast.Expression)
+	for _, p := range pat.([]any) {
+		pattern := p.([]any)
+		for i := 0; i < len(pattern); i += 2 {
+			var operator ast.BinaryOperator
+			switch pattern[i].(TokenKind) {
+			case TokGreaterEqual:
+				operator = ast.BinopGreaterEqual
+			case TokLessEqual:
+				operator = ast.BinopLessEqual
+			case TokGreater:
+				operator = ast.BinopGreater
+			case TokLess:
+				operator = ast.BinopLess
+			default:
+				panic("unreachable case in peg::grammar::Comparison")
+			}
+			expr = &ast.BinaryExpression {
+				Left:     expr,
+				Operator: operator,
+				Right:    pattern[i+1].(ast.Expression),
+			}
+		}
+	}
+	return expr, nil
+}
+
+Equality = l:Comparison pat:((BANG_EQUAL / EQUAL_EQUAL) Comparison)* {
+	expr := l.(ast.Expression)
+	for _, p := range pat.([]any) {
+		pattern := p.([]any)
+		for i := 0; i < len(pattern); i += 2 {
+			var operator ast.BinaryOperator
+			switch pattern[i].(TokenKind) {
+			case TokBangEqual:
+				operator = ast.BinopNotEqual
+			case TokEqualEqual:
+				operator = ast.BinopEqual
+			default:
+				panic("unreachable case in peg::grammar::Equality")
+			}
+			expr = &ast.BinaryExpression {
+				Left:     expr,
+				Operator: operator,
+				Right:    pattern[i+1].(ast.Expression),
+			}
+		}
+	}
+	return expr, nil
+}
+
+LogicalAnd = l:Equality pat:(AND Equality)* {
+	expr := l.(ast.Expression)
+	for _, p := range pat.([]any) {
+		pattern := p.([]any)
+		for i := 0; i < len(pattern); i += 2 {
+			expr = &ast.BinaryExpression {
+				Left:     expr,
+				Operator: ast.BinopLogicalAnd,
+				Right:    pattern[i+1].(ast.Expression),
+			}
+		}
+	}
+	return expr, nil
+}
+
+LogicalOr = l:LogicalAnd pat:(OR LogicalAnd)* {
+	expr := l.(ast.Expression)
+	for _, p := range pat.([]any) {
+		pattern := p.([]any)
+		for i := 0; i < len(pattern); i += 2 {
+			expr = &ast.BinaryExpression {
+				Left:     expr,
+				Operator: ast.BinopLogicalOr,
+				Right:    pattern[i+1].(ast.Expression),
+			}
+		}
+	}
+	return expr, nil
+}
+
+Assignment = prev:(Call DOT)? i:IDENTIFIER EQUAL e:Assignment {
+	var expr ast.Expression
+	if prev != nil {
+		previous := prev.([]any)
+		expr = &ast.PropertyAccessExpression {
+			Target:   previous[0].(ast.Expression),
+			Property: i.(ast.Identifier),
+		}
+	} else {
+		expr = i.(ast.Expression)
+	}
+	return &ast.AssignmentExpression{
+		Target: expr,
+		Value:  e.(ast.Expression),
+	}, nil
+} / LogicalOr
+
+Expression = Assignment
