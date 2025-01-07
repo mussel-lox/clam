@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/repr"
-	"github.com/mussel-lox/clam/internal/parser"
+	"github.com/mussel-lox/clam/parser"
 )
 
 func main() {
