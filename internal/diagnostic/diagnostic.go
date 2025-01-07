@@ -33,14 +33,8 @@ func NewDiagnostic(message string) *Diagnostic {
 }
 
 // At specifies the [d.position] of [d].
-func (d *Diagnostic) At(start, end int) *Diagnostic {
-	d.position = NewPosition(start, end)
-	return d
-}
-
-// AtChar sets the [d.position] at a specific character.
-func (d *Diagnostic) AtChar(offset int) *Diagnostic {
-	d.position = NewPositionAt(offset)
+func (d *Diagnostic) At(line, column int) *Diagnostic {
+	d.position = NewPosition(line, column)
 	return d
 }
 
@@ -61,26 +55,20 @@ func (d *Diagnostic) Error() string {
 		return builder.String()
 	}
 
-	linepos := d.position.transform(d.source)
-	for _, pos := range linepos {
-		fmt.Fprintf(builder, "%sin %s (%s)\n", filenameIndent, d.source.name, pos.String())
-		startLine := max(0, pos.Line-contextLines)
-		lineNumberFormat := fmt.Sprintf("%%%dv ", digitsOf(pos.Line+1))
-		for i := startLine; i <= pos.Line; i++ {
-			fmt.Fprint(builder, sourceLineIndent)
-			printSource(builder, lineNumberFormat, i+1)
-			printSource(builder, "%s\n", d.source.lines[i])
-		}
+	fmt.Fprintf(builder, "%sin %s (%s)\n", filenameIndent, d.source.name, d.position.String())
+	startLine := max(0, d.position.Line-contextLines)
+	lineNumberFormat := fmt.Sprintf("%%%dv ", digitsOf(d.position.Line+1))
+	for i := startLine; i <= d.position.Line; i++ {
 		fmt.Fprint(builder, sourceLineIndent)
-		fmt.Fprintf(builder, lineNumberFormat, "")
-		for range pos.Start {
-			fmt.Fprint(builder, " ")
-		}
-		for range pos.End - pos.Start + 1 {
-			printErrorUnderline(builder, "^")
-		}
-		printErrorUnderline(builder, " around here\n")
+		printSource(builder, lineNumberFormat, i+1)
+		printSource(builder, "%s\n", d.source.lines[i])
 	}
+	fmt.Fprint(builder, sourceLineIndent)
+	fmt.Fprintf(builder, lineNumberFormat, "")
+	for range d.position.Column {
+		fmt.Fprint(builder, " ")
+	}
+	printErrorUnderline(builder, "^ around here\n")
 	return builder.String()
 }
 

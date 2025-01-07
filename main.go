@@ -12,6 +12,7 @@ import (
 )
 
 func main() {
+	printer := repr.New(os.Stdout, repr.OmitEmpty(false))
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Print("> ")
@@ -25,8 +26,9 @@ func main() {
 
 		expr, err := parser.Parse(line)
 		if err != nil {
-			panic(err)
+			fmt.Fprint(os.Stderr, err.Error())
+			break
 		}
-		repr.Println(expr)
+		printer.Println(expr)
 	}
 }
