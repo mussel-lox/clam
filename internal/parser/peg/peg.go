@@ -13,11 +13,11 @@ import (
 )
 
 // ParseWithDiagnostic turns internal parserError into Diagnostic, which is more friendly to read.
-func ParseWithDiagnostic(filename, source string) (ast.Expression, error) {
+func ParseWithDiagnostic(filename, source string) ([]ast.Declaration, error) {
 	src := diagnostic.NewSource(filename, source)
 
 	var builder strings.Builder
-	expr, err := ParseReader(filename, strings.NewReader(source), Entrypoint("Expression"))
+	expr, err := ParseReader(filename, strings.NewReader(source), Entrypoint("Program"))
 	if err != nil {
 		for _, err := range err.(errList) {
 			e := err.(*parserError)
@@ -28,5 +28,5 @@ func ParseWithDiagnostic(filename, source string) (ast.Expression, error) {
 		}
 		return nil, errors.New(builder.String())
 	}
-	return expr.(ast.Expression), nil
+	return expr.([]ast.Declaration), nil
 }

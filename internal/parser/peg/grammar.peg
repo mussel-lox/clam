@@ -157,7 +157,7 @@ VAR           = _ "var"    _ { return TokVar, nil }
 WHILE         = _ "while"  _ { return TokWhile, nil }
 
 
-// Expression Utility Rules
+// Utility Rules
 
 arguments = args:(Expression (COMMA Expression)*) {
 	return recursiveResolveExpressions(args), nil
@@ -174,6 +174,7 @@ function = name:IDENTIFIER LEFT_PAREN params:parameters? RIGHT_PAREN body:Block 
 		Body:				body.(*ast.BlockStatement),
 	}, nil
 }
+
 
 // Expression Grammar
 
@@ -381,3 +382,136 @@ Assignment = prev:(Call DOT)? i:IDENTIFIER EQUAL e:Assignment {
 } / LogicalOr
 
 Expression = Assignment
+
+
+// Statement Grammar
+
+Statement
+	= ForStatement
+	/ IfStatement
+	/ PrintStatement
+	/ ReturnStatement
+	/ WhileStatement
+	/ Block
+	/ ExpressionStatement
+
+ExpressionStatement = e:Expression SEMICOLON {
+	return &ast.ExpressionStatement{Expression: e.(ast.Expression)}, nil
+}
+
+ForStatement = FOR LEFT_PAREN 
+	init:(VarDeclaration / ExpressionStatement / SEMICOLON) 
+	cond:Expression? SEMICOLON 
+	inc:Expression?
+RIGHT_PAREN b:Statement
+{
+	stmt := &ast.ForStatement {
+		Body: b.(ast.Statement),
+	}
+	switch initializer := init.(type) {
+	case *ast.VarDeclaration:
+		stmt.VarInitializer = initializer
+	case ast.Expression:
+		stmt.ExpressionInitializer = initializer
+	}
+	if cond != nil {
+		stmt.Condition = cond.(ast.Expression)
+	}
+	if inc != nil {
+		stmt.Increment = inc.(ast.Expression)
+	}
+	return stmt, nil
+}
+
+IfStatement = IF LEFT_PAREN cond:Expression RIGHT_PAREN then:Statement otherwise:(ELSE Statement)? {
+	stmt := &ast.IfStatement {
+		Condition: cond.(ast.Expression),
+		Then:      then.(ast.Statement),
+	}
+	if otherwise != nil {
+		stmt.Otherwise = (otherwise.([]any))[1].(ast.Statement)
+	}
+	return stmt, nil
+}
+
+PrintStatement = PRINT e:Expression SEMICOLON {
+	return &ast.PrintStatement{
+		Expression: e.(ast.Expression),
+	}, nil
+}
+
+ReturnStatement = RETURN e:Expression? SEMICOLON {
+	stmt := new(ast.ReturnStatement)
+	if e != nil {
+		stmt.Expression = e.(ast.Expression)
+	}
+	return stmt, nil
+}
+
+WhileStatement = WHILE LEFT_PAREN cond:Expression RIGHT_PAREN b:Statement {
+	return &ast.WhileStatement{
+		Condition: cond.(ast.Expression),
+		Body:      b.(ast.Statement),
+	}, nil
+}
+
+Block = LEFT_BRACE d:Declaration* RIGHT_BRACE {
+	var decls []ast.Declaration
+	for _, decl := range d.([]any) {
+		decls = append(decls, decl.(ast.Declaration))
+	}
+	return &ast.BlockStatement{Declarations: decls}, nil
+}
+
+
+// Declaration Grammar
+
+Declaration
+	= ClassDeclaration
+	/ FunDeclaration
+	/ VarDeclaration
+	/ StatementDeclaration
+
+StatementDeclaration = s:Statement {
+	return &ast.StatementDeclaration{
+		Statement: s.(ast.Statement),
+	}, nil
+}
+
+ClassDeclaration = CLASS i:IDENTIFIER ext:(LESS IDENTIFIER)? LEFT_BRACE m:function* RIGHT_BRACE {
+	var methods []ast.FunDeclaration
+	for _, method := range m.([]any) {
+		methods = append(methods, method.(ast.FunDeclaration))
+	}
+	decl := &ast.ClassDeclaration {
+		Name:    i.(ast.Identifier),
+		Methods: methods,
+	}
+	if ext != nil {
+		decl.Baseclass = new(ast.Identifier)
+		*decl.Baseclass = (ext.([]any))[1].(ast.Identifier)
+	}
+	return decl, nil
+}
+
+FunDeclaration = FUN f:function { return f, nil }
+
+VarDeclaration = VAR i:IDENTIFIER init:(EQUAL Expression)? SEMICOLON {
+	decl := &ast.VarDeclaration {
+		Name: i.(ast.Identifier),
+	}
+	if init != nil {
+		decl.Initializer = (init.([]any))[1].(ast.Expression)
+	}
+	return decl, nil
+}
+
+// The final program consists of some declarations.
+
+Program = d:Declaration* {
+	var decls []ast.Declaration
+	for _, decl := range d.([]any) {
+		decls = append(decls, decl.(ast.Declaration))
+	}
+	return decls, nil
+}

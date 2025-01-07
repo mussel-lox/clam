@@ -7,10 +7,10 @@ import (
 )
 
 // Parse is the only API public to outside. Inner implementation may change any time.
-func Parse(source string) (ast.Expression, error) {
-	expr, err := peg.ParseWithDiagnostic("<script>", source)
+func Parse(source string) ([]ast.Declaration, error) {
+	prog, err := peg.ParseWithDiagnostic("<script>", source)
 	if err != nil {
 		return nil, err
 	}
-	return expr.(ast.Expression), nil
+	return prog, nil
 }
