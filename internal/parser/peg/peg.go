@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode"
 
 	"github.com/mussel-lox/clam/ast"
 	"github.com/mussel-lox/clam/internal/diagnostic"
@@ -79,9 +80,9 @@ func ParseWithDiagnostic(filename, source string) ([]ast.Declaration, error) {
 	expr, err := ParseReader(filename, strings.NewReader(source), Entrypoint("Program"))
 	if err != nil {
 		for _, err := range err.(errList) {
-			e := err.(*parserError)
-			diag := diagnostic.NewDiagnostic(fmt.Sprint(e.Inner.Error())).
-				At(e.pos.line-1, e.pos.col-1).
+			e := err.(*parserError).Inner.(locatedError)
+			diag := diagnostic.NewDiagnostic(fmt.Sprint(e.Error())).
+				At(e.line-1, e.column-1).
 				Attach(src)
 			fmt.Fprintln(&builder, diag)
 		}
@@ -107,4 +108,23 @@ func parseBinary(l, pat any) ast.Expression {
 		}
 	}
 	return left
+}
+
+type locatedError struct {
+	line    int
+	column  int
+	message string
+}
+
+func newLocatedError(c *current, message string) locatedError {
+	text := strings.TrimRightFunc(string(c.text), unicode.IsSpace)
+	return locatedError{
+		line:    c.pos.line,
+		column:  c.pos.col + len(text),
+		message: message,
+	}
+}
+
+func (l locatedError) Error() string {
+	return l.message
 }

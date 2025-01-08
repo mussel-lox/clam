@@ -8,7 +8,6 @@
 
 	import (
 		"bytes"
-		"errors"
 		"strconv"
 		"strings"
 		
@@ -17,6 +16,10 @@
 
 	func matchedTextOf(c *current) string {
 		return strings.TrimSpace(string(c.text))
+	}
+
+	func (c *current) throw(message string) error {
+		return newLocatedError(c, message)
 	}
 }
 
@@ -119,13 +122,13 @@ function = name:IDENTIFIER LEFT_PAREN params:parameters? RIGHT_PAREN body:Block 
 		Body:				body.(*ast.BlockStatement),
 	}, nil
 } / IDENTIFIER LEFT_PAREN parameters RIGHT_PAREN {
-	return nil, errors.New("expected function body block")
+	return nil, c.throw("expected function body block")
 } / IDENTIFIER LEFT_PAREN parameters {
-	return nil, errors.New("expected right parenthesis")
+	return nil, c.throw("expected right parenthesis")
 } / IDENTIFIER LEFT_PAREN {
-	return nil, errors.New("expected parameters or right parenthesis")
+	return nil, c.throw("expected parameters or right parenthesis")
 } / IDENTIFIER {
-	return nil, errors.New("expected left parenthesis")
+	return nil, c.throw("expected left parenthesis")
 }
 
 
@@ -231,7 +234,7 @@ ExpressionStatement = e:Expression SEMICOLON {
 	}
 	return &ast.ExpressionStatement{Expression: e.(ast.Expression)}, nil
 } / Expression {
-	return nil, errors.New("expected semicolon")
+	return nil, c.throw("expected semicolon")
 }
 
 ForStatement = FOR LEFT_PAREN 
@@ -257,15 +260,15 @@ RIGHT_PAREN b:Statement
 	}
 	return stmt, nil
 } / FOR LEFT_PAREN (VarDeclaration / ExpressionStatement / SEMICOLON) Expression? SEMICOLON Expression? RIGHT_PAREN {
-	return nil, errors.New("expected statement")
+	return nil, c.throw("expected statement")
 } / FOR LEFT_PAREN (VarDeclaration / ExpressionStatement / SEMICOLON) Expression? SEMICOLON Expression? {
-	return nil, errors.New("expected right parenthesis")
+	return nil, c.throw("expected right parenthesis")
 } / FOR LEFT_PAREN (VarDeclaration / ExpressionStatement / SEMICOLON) Expression? {
-	return nil, errors.New("expected semicolon")
+	return nil, c.throw("expected semicolon")
 } / FOR LEFT_PAREN {
-	return nil, errors.New("expected var declaration, expression or semicolon")
+	return nil, c.throw("expected var declaration, expression or semicolon")
 } / FOR {
-	return nil, errors.New("expected left parenthesis")
+	return nil, c.throw("expected left parenthesis")
 }
 
 IfStatement = IF LEFT_PAREN cond:Expression RIGHT_PAREN then:Statement otherwise:(ELSE Statement)? {
@@ -278,15 +281,15 @@ IfStatement = IF LEFT_PAREN cond:Expression RIGHT_PAREN then:Statement otherwise
 	}
 	return stmt, nil
 } / IF LEFT_PAREN Expression RIGHT_PAREN Statement ELSE {
-	return nil, errors.New("expected statement of else branch")
+	return nil, c.throw("expected statement of else branch")
 } / IF LEFT_PAREN Expression RIGHT_PAREN {
-	return nil, errors.New("expected statement")
+	return nil, c.throw("expected statement")
 } / IF LEFT_PAREN Expression {
-	return nil, errors.New("expected right parenthesis")
+	return nil, c.throw("expected right parenthesis")
 } / IF LEFT_PAREN {
-	return nil, errors.New("expected if condition")
+	return nil, c.throw("expected if condition")
 } / IF {
-	return nil, errors.New("expected left parenthesis")
+	return nil, c.throw("expected left parenthesis")
 }
 
 PrintStatement = PRINT e:Expression SEMICOLON {
@@ -294,9 +297,9 @@ PrintStatement = PRINT e:Expression SEMICOLON {
 		Expression: e.(ast.Expression),
 	}, nil
 } / PRINT Expression {
-	return nil, errors.New("expected semicolon")
+	return nil, c.throw("expected semicolon")
 } / PRINT {
-	return nil, errors.New("expected expression")
+	return nil, c.throw("expected expression")
 }
 
 ReturnStatement = RETURN e:Expression? SEMICOLON {
@@ -306,7 +309,7 @@ ReturnStatement = RETURN e:Expression? SEMICOLON {
 	}
 	return stmt, nil
 } / RETURN Expression? {
-	return nil, errors.New("expected semicolon")
+	return nil, c.throw("expected semicolon")
 }
 
 WhileStatement = WHILE LEFT_PAREN cond:Expression RIGHT_PAREN b:Statement {
@@ -315,13 +318,13 @@ WhileStatement = WHILE LEFT_PAREN cond:Expression RIGHT_PAREN b:Statement {
 		Body:      b.(ast.Statement),
 	}, nil
 } / WHILE LEFT_PAREN Expression RIGHT_PAREN {
-	return nil, errors.New("expected while body statement")
+	return nil, c.throw("expected while body statement")
 } / WHILE LEFT_PAREN Expression {
-	return nil, errors.New("expected right parenthesis")
+	return nil, c.throw("expected right parenthesis")
 } / WHILE LEFT_PAREN {
-	return nil, errors.New("expected while condition")
+	return nil, c.throw("expected while condition")
 } / WHILE {
-	return nil, errors.New("expected left parenthesis")
+	return nil, c.throw("expected left parenthesis")
 }
 
 Block = LEFT_BRACE d:Declaration* RIGHT_BRACE {
@@ -334,7 +337,7 @@ Block = LEFT_BRACE d:Declaration* RIGHT_BRACE {
 	}
 	return &ast.BlockStatement{Declarations: decls}, nil
 } / LEFT_BRACE Declaration* {
-	return nil, errors.New("expected closing right brace of block")
+	return nil, c.throw("expected closing right brace of block")
 }
 
 
@@ -368,17 +371,17 @@ ClassDeclaration = CLASS i:IDENTIFIER ext:(LESS IDENTIFIER)? LEFT_BRACE m:functi
 	}
 	return decl, nil
 } / CLASS IDENTIFIER LESS IDENTIFIER LEFT_BRACE function* {
-	return nil, errors.New("expected closing right brace of class")
+	return nil, c.throw("expected closing right brace of class")
 } / CLASS IDENTIFIER LESS IDENTIFIER {
-	return nil, errors.New("expected opening left brace of class")
+	return nil, c.throw("expected opening left brace of class")
 } / CLASS IDENTIFIER LESS {
-	return nil, errors.New("expected baseclass name")
+	return nil, c.throw("expected baseclass name")
 } / CLASS IDENTIFIER LEFT_BRACE function* {
-	return nil, errors.New("expected closing right brace of class")
+	return nil, c.throw("expected closing right brace of class")
 } / CLASS IDENTIFIER {
-	return nil, errors.New("expected opening left brace of class")
+	return nil, c.throw("expected opening left brace of class")
 } / CLASS {
-	return nil, errors.New("expected class name")
+	return nil, c.throw("expected class name")
 }
 
 FunDeclaration = FUN f:function { return f, nil }
@@ -392,13 +395,13 @@ VarDeclaration = VAR i:IDENTIFIER init:(EQUAL Expression)? SEMICOLON {
 	}
 	return decl, nil
 } / VAR IDENTIFIER EQUAL Expression {
-	return nil, errors.New("expected semicolon")
+	return nil, c.throw("expected semicolon")
 } / VAR IDENTIFIER EQUAL {
-	return nil, errors.New("expected expression")
+	return nil, c.throw("expected expression")
 } / VAR IDENTIFIER {
-	return nil, errors.New("expected semicolon")
+	return nil, c.throw("expected semicolon")
 } / VAR {
-	return nil, errors.New("expected variable name")
+	return nil, c.throw("expected variable name")
 }
 
 // The final program consists of some declarations.
