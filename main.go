@@ -27,7 +27,7 @@ func main() {
 		expr, err := parser.Parse(line)
 		if err != nil {
 			fmt.Fprint(os.Stderr, err.Error())
-			break
+			continue
 		}
 		printer.Println(expr)
 	}

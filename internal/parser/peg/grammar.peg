@@ -8,6 +8,7 @@
 
 	import (
 		"bytes"
+		"errors"
 		"strconv"
 		"strings"
 		
@@ -117,6 +118,14 @@ function = name:IDENTIFIER LEFT_PAREN params:parameters? RIGHT_PAREN body:Block 
 		Parameters: params.([]ast.Identifier),
 		Body:				body.(*ast.BlockStatement),
 	}, nil
+} / IDENTIFIER LEFT_PAREN parameters RIGHT_PAREN {
+	return nil, errors.New("expected function body block")
+} / IDENTIFIER LEFT_PAREN parameters {
+	return nil, errors.New("expected right parenthesis")
+} / IDENTIFIER LEFT_PAREN {
+	return nil, errors.New("expected parameters or right parenthesis")
+} / IDENTIFIER {
+	return nil, errors.New("expected left parenthesis")
 }
 
 
@@ -217,7 +226,12 @@ Statement
 	/ ExpressionStatement
 
 ExpressionStatement = e:Expression SEMICOLON {
+	if e == nil {
+		return nil, nil // errors are reported earlier. just return.
+	}
 	return &ast.ExpressionStatement{Expression: e.(ast.Expression)}, nil
+} / Expression {
+	return nil, errors.New("expected semicolon")
 }
 
 ForStatement = FOR LEFT_PAREN 
@@ -242,6 +256,16 @@ RIGHT_PAREN b:Statement
 		stmt.Increment = inc.(ast.Expression)
 	}
 	return stmt, nil
+} / FOR LEFT_PAREN (VarDeclaration / ExpressionStatement / SEMICOLON) Expression? SEMICOLON Expression? RIGHT_PAREN {
+	return nil, errors.New("expected statement")
+} / FOR LEFT_PAREN (VarDeclaration / ExpressionStatement / SEMICOLON) Expression? SEMICOLON Expression? {
+	return nil, errors.New("expected right parenthesis")
+} / FOR LEFT_PAREN (VarDeclaration / ExpressionStatement / SEMICOLON) Expression? {
+	return nil, errors.New("expected semicolon")
+} / FOR LEFT_PAREN {
+	return nil, errors.New("expected var declaration, expression or semicolon")
+} / FOR {
+	return nil, errors.New("expected left parenthesis")
 }
 
 IfStatement = IF LEFT_PAREN cond:Expression RIGHT_PAREN then:Statement otherwise:(ELSE Statement)? {
@@ -253,12 +277,26 @@ IfStatement = IF LEFT_PAREN cond:Expression RIGHT_PAREN then:Statement otherwise
 		stmt.Otherwise = (otherwise.([]any))[1].(ast.Statement)
 	}
 	return stmt, nil
+} / IF LEFT_PAREN Expression RIGHT_PAREN Statement ELSE {
+	return nil, errors.New("expected statement of else branch")
+} / IF LEFT_PAREN Expression RIGHT_PAREN {
+	return nil, errors.New("expected statement")
+} / IF LEFT_PAREN Expression {
+	return nil, errors.New("expected right parenthesis")
+} / IF LEFT_PAREN {
+	return nil, errors.New("expected if condition")
+} / IF {
+	return nil, errors.New("expected left parenthesis")
 }
 
 PrintStatement = PRINT e:Expression SEMICOLON {
 	return &ast.PrintStatement{
 		Expression: e.(ast.Expression),
 	}, nil
+} / PRINT Expression {
+	return nil, errors.New("expected semicolon")
+} / PRINT {
+	return nil, errors.New("expected expression")
 }
 
 ReturnStatement = RETURN e:Expression? SEMICOLON {
@@ -267,6 +305,8 @@ ReturnStatement = RETURN e:Expression? SEMICOLON {
 		stmt.Expression = e.(ast.Expression)
 	}
 	return stmt, nil
+} / RETURN Expression? {
+	return nil, errors.New("expected semicolon")
 }
 
 WhileStatement = WHILE LEFT_PAREN cond:Expression RIGHT_PAREN b:Statement {
@@ -274,14 +314,27 @@ WhileStatement = WHILE LEFT_PAREN cond:Expression RIGHT_PAREN b:Statement {
 		Condition: cond.(ast.Expression),
 		Body:      b.(ast.Statement),
 	}, nil
+} / WHILE LEFT_PAREN Expression RIGHT_PAREN {
+	return nil, errors.New("expected while body statement")
+} / WHILE LEFT_PAREN Expression {
+	return nil, errors.New("expected right parenthesis")
+} / WHILE LEFT_PAREN {
+	return nil, errors.New("expected while condition")
+} / WHILE {
+	return nil, errors.New("expected left parenthesis")
 }
 
 Block = LEFT_BRACE d:Declaration* RIGHT_BRACE {
 	var decls []ast.Declaration
 	for _, decl := range d.([]any) {
+		if decl == nil {
+			return nil, nil // errors are reported earlier. just return.
+		}
 		decls = append(decls, decl.(ast.Declaration))
 	}
 	return &ast.BlockStatement{Declarations: decls}, nil
+} / LEFT_BRACE Declaration* {
+	return nil, errors.New("expected closing right brace of block")
 }
 
 
@@ -294,9 +347,10 @@ Declaration
 	/ StatementDeclaration
 
 StatementDeclaration = s:Statement {
-	return &ast.StatementDeclaration{
-		Statement: s.(ast.Statement),
-	}, nil
+	if s == nil {
+		return nil, nil // errors are reported earlier. just return.
+	}
+	return &ast.StatementDeclaration{Statement: s.(ast.Statement)}, nil
 }
 
 ClassDeclaration = CLASS i:IDENTIFIER ext:(LESS IDENTIFIER)? LEFT_BRACE m:function* RIGHT_BRACE {
@@ -313,6 +367,18 @@ ClassDeclaration = CLASS i:IDENTIFIER ext:(LESS IDENTIFIER)? LEFT_BRACE m:functi
 		*decl.Baseclass = (ext.([]any))[1].(ast.Identifier)
 	}
 	return decl, nil
+} / CLASS IDENTIFIER LESS IDENTIFIER LEFT_BRACE function* {
+	return nil, errors.New("expected closing right brace of class")
+} / CLASS IDENTIFIER LESS IDENTIFIER {
+	return nil, errors.New("expected opening left brace of class")
+} / CLASS IDENTIFIER LESS {
+	return nil, errors.New("expected baseclass name")
+} / CLASS IDENTIFIER LEFT_BRACE function* {
+	return nil, errors.New("expected closing right brace of class")
+} / CLASS IDENTIFIER {
+	return nil, errors.New("expected opening left brace of class")
+} / CLASS {
+	return nil, errors.New("expected class name")
 }
 
 FunDeclaration = FUN f:function { return f, nil }
@@ -325,6 +391,14 @@ VarDeclaration = VAR i:IDENTIFIER init:(EQUAL Expression)? SEMICOLON {
 		decl.Initializer = (init.([]any))[1].(ast.Expression)
 	}
 	return decl, nil
+} / VAR IDENTIFIER EQUAL Expression {
+	return nil, errors.New("expected semicolon")
+} / VAR IDENTIFIER EQUAL {
+	return nil, errors.New("expected expression")
+} / VAR IDENTIFIER {
+	return nil, errors.New("expected semicolon")
+} / VAR {
+	return nil, errors.New("expected variable name")
 }
 
 // The final program consists of some declarations.
@@ -332,6 +406,9 @@ VarDeclaration = VAR i:IDENTIFIER init:(EQUAL Expression)? SEMICOLON {
 Program = d:Declaration* {
 	var decls []ast.Declaration
 	for _, decl := range d.([]any) {
+		if decl == nil {
+			return nil, nil // errors are reported earlier. just return.
+		}
 		decls = append(decls, decl.(ast.Declaration))
 	}
 	return decls, nil
