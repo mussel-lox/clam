@@ -13,8 +13,6 @@ import (
 	"github.com/mussel-lox/clam/internal/diagnostic"
 )
 
-//revive:disable
-
 const (
 	TokLeftParenthesis TokenKind = iota
 	TokRightParenthesis
@@ -70,25 +68,34 @@ var operatorMapping = map[TokenKind]ast.BinaryOperator{
 
 type TokenKind int
 
-//revive:enable
-
 // ParseWithDiagnostic turns internal parserError into Diagnostic, which is more friendly to read.
 func ParseWithDiagnostic(filename, source string) ([]ast.Declaration, error) {
-	src := diagnostic.NewSource(filename, source)
-
 	var builder strings.Builder
-	expr, err := ParseReader(filename, strings.NewReader(source), Entrypoint("Program"))
+
+	src := diagnostic.NewSource(filename, source)
+	program, err := ParseReader(filename, strings.NewReader(source), Entrypoint("Program"))
 	if err != nil {
-		for _, err := range err.(errList) {
-			e := err.(*parserError).Inner.(locatedError)
-			diag := diagnostic.NewDiagnostic(fmt.Sprint(e.Error())).
-				At(e.line-1, e.column-1).
+		var errorList errList
+		if !errors.As(err, &errorList) {
+			panic("unreachable case in asserting errList")
+		}
+		for _, err := range errorList {
+			var parserErr *parserError
+			if !errors.As(err, &parserErr) {
+				panic("unreachable case in asserting *parserError")
+			}
+			var locatedErr locatedError
+			if !errors.As(parserErr.Inner, &locatedErr) {
+				panic("unreachable case in asserting locatedError")
+			}
+			diag := diagnostic.NewDiagnostic(fmt.Sprint(locatedErr.Error())).
+				At(locatedErr.line-1, locatedErr.column-1).
 				Attach(src)
-			fmt.Fprintln(&builder, diag)
+			_, _ = fmt.Fprintln(&builder, diag)
 		}
 		return nil, errors.New(builder.String())
 	}
-	return expr.([]ast.Declaration), nil
+	return program.([]ast.Declaration), nil
 }
 
 func parseBinary(l, pat any) ast.Expression {

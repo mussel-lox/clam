@@ -1,4 +1,3 @@
-//revive:disable-line
 package main
 
 import (
@@ -26,7 +25,7 @@ func main() {
 
 		expr, err := parser.Parse(line)
 		if err != nil {
-			fmt.Fprint(os.Stderr, err.Error())
+			_, _ = fmt.Fprint(os.Stderr, err.Error())
 			continue
 		}
 		printer.Println(expr)

@@ -55,18 +55,18 @@ func (d *Diagnostic) Error() string {
 		return builder.String()
 	}
 
-	fmt.Fprintf(builder, "%sin %s (%s)\n", filenameIndent, d.source.name, d.position.String())
+	_, _ = fmt.Fprintf(builder, "%sin %s (%s)\n", filenameIndent, d.source.name, d.position.String())
 	startLine := max(0, d.position.Line-contextLines)
 	lineNumberFormat := fmt.Sprintf("%%%dv ", digitsOf(d.position.Line+1))
 	for i := startLine; i <= d.position.Line; i++ {
-		fmt.Fprint(builder, sourceLineIndent)
+		_, _ = fmt.Fprint(builder, sourceLineIndent)
 		printSource(builder, lineNumberFormat, i+1)
 		printSource(builder, "%s\n", d.source.lines[i])
 	}
-	fmt.Fprint(builder, sourceLineIndent)
-	fmt.Fprintf(builder, lineNumberFormat, "")
+	_, _ = fmt.Fprint(builder, sourceLineIndent)
+	_, _ = fmt.Fprintf(builder, lineNumberFormat, "")
 	for range d.position.Column {
-		fmt.Fprint(builder, " ")
+		_, _ = fmt.Fprint(builder, " ")
 	}
 	printErrorUnderline(builder, "^ around here\n")
 	return builder.String()
