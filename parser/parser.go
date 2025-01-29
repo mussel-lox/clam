@@ -1,16 +1,13 @@
-// Package parser provides an abstract API to parse source into ASTs.
+// Package parser contains the public API to parse a source code string into a slice of [ast.Declaration].
+// The internal implementation may be changed any time.
 package parser
 
 import (
 	"github.com/mussel-lox/clam/ast"
-	"github.com/mussel-lox/clam/internal/parser/peg"
+	"github.com/mussel-lox/clam/parser/peg"
 )
 
-// Parse is the only API public to outside. Inner implementation may change any time.
-func Parse(source string) ([]ast.Declaration, error) {
-	prog, err := peg.ParseWithDiagnostic("<script>", source)
-	if err != nil {
-		return nil, err
-	}
-	return prog, nil
+// Parse is the only API that is stable. The internal implementation (including package peg) may be changed any time.
+func Parse(filename, source string) ([]ast.Declaration, error) {
+	return peg.ParseWithDiagnostic(filename, source)
 }
